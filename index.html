@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion / Inscription Firebase</title>
+  <style>
+    body {
+      font-family: Arial;
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+    }
+    input {
+      display: block;
+      margin-bottom: 10px;
+      padding: 8px;
+      width: 100%;
+    }
+    button {
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+    }
+    .toggle {
+      color: blue;
+      cursor: pointer;
+      margin-top: 10px;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<h2 id="title">Connexion</h2>
+
+<form id="form">
+  <input type="text" id="nom" placeholder="Nom" class="register-only" style="display:none;">
+  <input type="text" id="prenom" placeholder="Prénom" class="register-only" style="display:none;">
+  <input type="text" id="fonction" placeholder="Fonction" class="register-only" style="display:none;">
+
+  <input type="email" id="email" placeholder="Email" required>
+  <input type="password" id="password" placeholder="Mot de passe" required>
+
+  <button type="submit">Se connecter</button>
+</form>
+
+<p class="toggle" id="toggle">Créer un compte</p>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendEmailVerification,
+    onAuthStateChanged,setPersistence, browserSessionPersistence
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  import {
+    getFirestore,
+    setDoc,
+    doc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA58NXhLlnvjdczxfqUSczrRBz1HJrI77I",
+  authDomain: "compta-hirsi.firebaseapp.com",
+  projectId: "compta-hirsi",
+  storageBucket: "compta-hirsi.firebasestorage.app",
+  messagingSenderId: "677903647731",
+  appId: "1:677903647731:web:4292c36862a308af5b8886"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  await setPersistence(auth, browserSessionPersistence);
+  const db = getFirestore(app);
+
+  const form = document.getElementById("form");
+  const toggle = document.getElementById("toggle");
+  const title = document.getElementById("title");
+  const registerFields = document.querySelectorAll(".register-only");
+
+  let isLogin = true;
+
+
+  toggle.onclick = () => {
+    isLogin = !isLogin;
+
+    registerFields.forEach(el => {
+      el.style.display = isLogin ? "none" : "block";
+    });
+
+    title.textContent = isLogin ? "Connexion" : "Inscription";
+    form.querySelector("button").textContent = isLogin ? "Se connecter" : "S'inscrire";
+    toggle.textContent = isLogin ? "Créer un compte" : "Déjà un compte ?";
+  };
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if (isLogin) {
+      // 🔐 CONNEXION
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        if (!user.emailVerified) {
+          alert("Veuillez vérifier votre email avant de vous connecter.");
+          return;
+        }
+
+        // alert("Connexion réussie !");
+        window.location.href = "register.html";
+
+      } catch (error) {
+        alert(error.message);
+      }
+
+    } else {
+      // 📝 INSCRIPTION
+      const nom = document.getElementById("nom").value;
+      const prenom = document.getElementById("prenom").value;
+      const fonction = document.getElementById("fonction").value;
+      const email = document.getElementById("email").value;
+      const file = document.getElementById("photo").files[0];
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 📧 Vérification email
+        await sendEmailVerification(user);
+
+        // 💾 Sauvegarde Firestore
+        await setDoc(doc(db, "users", user.uid), {
+        nom,
+        prenom,
+        email,
+        fonction,
+        photo: "" // 🔥 important
+       });
+
+        alert("Compte créé ! Vérifiez votre email avant de vous connecter.");
+
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    form.reset();
+  });
+
+  let timeout;
+
+function resetTimer() {
+    clearTimeout(timeout);
+
+    timeout = setTimeout(() => {
+        alert("Session expirée (10 min d'inactivité)");
+        auth.signOut().then(() => {
+            window.location.href = "index.html";
+        });
+    }, 10 * 60 * 1000); // 10 minutes
+}
+
+// 🔥 détecter activité utilisateur
+["click", "mousemove", "keypress", "scroll", "touchstart"].forEach(event => {
+    document.addEventListener(event, resetTimer);
+});
+
+// lancer au début
+
+resetTimer();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!--DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Produits Cloudinary + Firebase</title>
+</head>
+
+<body>
+
+<h1>Ajouter un produit</h1>
+
+<form id="form">
+    <input type="text" id="nom" placeholder="Nom" required><br><br>
+    <input type="number" id="prix" placeholder="Prix" required><br><br>
+    <textarea id="desc" placeholder="Description" required></textarea><br><br>
+    <input type="file" id="image" required><br><br>
+    <button type="submit">Ajouter</button>
+</form>
+
+<h2>Liste des produits</h2>
+<ul id="liste"></ul>
+
+<script type="module">
+
+// 🔥 FIREBASE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, addDoc, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// 🔥 CONFIG FIREBASE (TES INFOS OK)
+const firebaseConfig = {
+  apiKey: "AIzaSyA58NXhLlnvjdczxfqUSczrRBz1HJrI77I",
+  authDomain: "compta-hirsi.firebaseapp.com",
+  projectId: "compta-hirsi",
+  storageBucket: "compta-hirsi.firebasestorage.app",
+  messagingSenderId: "677903647731",
+  appId: "1:677903647731:web:4292c36862a308af5b8886",
+  measurementId: "G-HW9R7K1BWV"
+};
+
+// INIT FIREBASE
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// DOM
+const form = document.getElementById("form");
+const liste = document.getElementById("liste");
+
+// 🔥 AJOUT PRODUIT
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nom = document.getElementById("nom").value;
+    const prix = document.getElementById("prix").value;
+    const desc = document.getElementById("desc").value;
+    const file = document.getElementById("image").files[0];
+
+    try {
+        // 🔥 1. UPLOAD CLOUDINARY
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", "mon_formulaire"); // ⚠️ TON PRESET
+
+        const res = await fetch("https://api.cloudinary.com/v1_1/dbp6jdmxz/auto/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (!data.secure_url) {
+            console.error(data);
+            alert("Erreur upload Cloudinary");
+            return;
+        }
+
+        const imageUrl = data.secure_url;
+
+        // 🔥 2. SAUVEGARDE FIRESTORE
+        await addDoc(collection(db, "produits"), {
+            nom,
+            prix,
+            desc,
+            image: imageUrl
+        });
+
+        alert("Produit ajouté !");
+        form.reset();
+        afficherProduits();
+
+    } catch (err) {
+        console.error(err);
+        alert("Erreur !");
+    }
+});
+
+// 🔥 AFFICHER PRODUITS
+async function afficherProduits() {
+    liste.innerHTML = "";
+
+    const querySnapshot = await getDocs(collection(db, "produits"));
+
+    querySnapshot.forEach((docItem) => {
+        const data = docItem.data();
+
+        const li = document.createElement("li");
+
+        li.innerHTML = `
+            <strong>${data.nom}</strong> - ${data.prix} FCFA
+            <br>${data.desc}
+            <br>
+            <img src="${data.image}" width="100"><br><br>
+
+            <button onclick="telecharger('${data.image}')">Télécharger</button>
+            <button onclick="supprimer('${docItem.id}')">Supprimer</button>
+            <hr>
+        `;
+
+        liste.appendChild(li);
+    });
+}
+
+// 🔥 SUPPRIMER
+window.supprimer = async (id) => {
+    await deleteDoc(doc(db, "produits", id));
+    afficherProduits();
+};
+
+// 🔥 TELECHARGER (Cloudinary direct)
+window.telecharger = (url) => {
+    const downloadUrl = url.replace("/upload/", "/upload/fl_attachment/");
+    window.open(downloadUrl, "_blank");
+};
+
+// INIT
+afficherProduits();
+
+</script>
+
+</body>
+</html-->
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Produits Cloudinary + Firebase</title>
+</head>
+
+<body>
+
+<h1>Ajouter un produit</h1>
+
+<form id="form">
+    <input type="text" id="nom" placeholder="Nom" required><br><br>
+    <input type="number" id="prix" placeholder="Prix" required><br><br>
+    <textarea id="desc" placeholder="Description" required></textarea><br><br>
+    <input type="file" id="image" required><br><br>
+    <button type="submit">Ajouter</button>
+</form>
+
+<h2>Liste des produits</h2>
+
+<table border="1">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Image</th>
+            <th>Nom</th>
+            <th>Prix</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+</table>
+
+<script type="module">
+
+// 🔥 FIREBASE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, addDoc, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyA58NXhLlnvjdczxfqUSczrRBz1HJrI77I",
+  authDomain: "compta-hirsi.firebaseapp.com",
+  projectId: "compta-hirsi",
+  storageBucket: "compta-hirsi.firebasestorage.app",
+  messagingSenderId: "677903647731",
+  appId: "1:677903647731:web:4292c36862a308af5b8886"
+};
+
+// INIT
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// DOM
+const form = document.getElementById("form");
+const tableBody = document.getElementById("tableBody");
+
+// 🔥 AJOUT PRODUIT
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nom = document.getElementById("nom").value;
+    const prix = document.getElementById("prix").value;
+    const desc = document.getElementById("desc").value;
+    const file = document.getElementById("image").files[0];
+
+    try {
+        // 🔥 UPLOAD CLOUDINARY
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", "mon_formulaire");
+
+        const res = await fetch("https://api.cloudinary.com/v1_1/dbp6jdmxz/auto/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (!data.secure_url) {
+            console.error(data);
+            alert("Erreur Cloudinary");
+            return;
+        }
+
+        // 🔥 IMPORTANT : garder le vrai nom
+        const originalName = file.name;
+
+        // 🔥 SAUVEGARDE FIRESTORE
+        await addDoc(collection(db, "produits"), {
+            nom,
+            prix,
+            desc,
+            image: data.secure_url,
+            filename: originalName
+        });
+
+        alert("Produit ajouté !");
+        form.reset();
+        afficherProduits();
+
+    } catch (err) {
+        console.error(err);
+        alert("Erreur !");
+    }
+});
+
+// 🔥 AFFICHER PRODUITS (TABLE)
+async function afficherProduits() {
+    tableBody.innerHTML = "";
+
+    const querySnapshot = await getDocs(collection(db, "produits"));
+
+    querySnapshot.forEach((docItem) => {
+        const data = docItem.data();
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${docItem.id}</td>
+
+            <td>
+                <a href="${data.image}" target="_blank">
+                    ${data.filename || "fichier"}
+                </a>
+                <br>
+                <button onclick="telecharger('${data.image}', '${data.filename}')">
+                    Télécharger
+                </button>
+            </td>
+
+            <td>${data.nom}</td>
+            <td>${data.prix}</td>
+            <td>${data.desc}</td>
+
+            <td>
+                <button onclick="supprimer('${docItem.id}')">Supprimer</button>
+            </td>
+        `;
+
+        tableBody.appendChild(tr);
+    });
+}
+
+// 🔥 SUPPRIMER
+window.supprimer = async (id) => {
+    await deleteDoc(doc(db, "produits", id));
+    afficherProduits();
+};
+
+// 🔥 TELECHARGER AVEC NOM ORIGINAL
+window.telecharger = (url, filename) => {
+    const downloadUrl = url.replace("/upload/", "/upload/fl_attachment/" + filename);
+    window.open(downloadUrl, "_blank");
+};
+
+// INIT
+afficherProduits();
+
+</script>
+
+</body>
+</html>
+
+
+
+
+ <td>
+    //             ${
+    //     data.image
+    //     ? `
+    //         <a href="${data.image}" target="_blank">
+    //             ${data.filename || "Fichier"}
+    //         </a>
+    //         <br>
+    //         <button onclick="downloadFile('${data.image}')">
+    //             Télécharger
+    //         </button>
+    //     `
+    //     : "Aucun fichier"
+    // }
+    //         </td>

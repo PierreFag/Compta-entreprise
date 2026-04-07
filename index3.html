@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Produits Cloudinary + Firestore</title>
+</head>
+
+<body>
+
+<h1>Ajouter un produit</h1>
+
+<form id="form">
+    <input type="text" id="nom" placeholder="Nom" required><br><br>
+
+    <select id="type" required>
+        <option value="">-- Type de paiement --</option>
+        <option value="Espèce">Espèce</option>
+        <option value="Chèque">Chèque</option>
+        <option value="Virement">Virement</option>
+        <option value="Mobile Money">Mobile Money</option>
+    </select><br><br>
+
+    <input type="number" id="prix" placeholder="Prix" required><br><br>
+    <textarea id="desc" placeholder="Description" required></textarea><br><br>
+
+    <input type="file" id="fileInput" multiple required><br><br>
+
+    <label>Auto incrémentation :</label>
+    <select id="auto">
+        <option value="1">Activé</option>
+        <option value="0">Désactivé</option>
+    </select><br><br>
+
+    <input type="number" id="customId" placeholder="ID manuel" style="display:none"><br>
+
+    <button type="submit">Ajouter</button>
+</form>
+
+<hr>
+
+<h3>Fichiers uploadés (localStorage)</h3>
+<ul id="fileList"></ul>
+
+<hr>
+
+<h3>Supprimer un produit</h3>
+<input type="number" id="deleteId" placeholder="Entrer ID">
+<button onclick="supprimerParId()">Supprimer</button>
+
+<hr>
+
+<h3>Modifier un produit</h3>
+
+<input type="number" id="editId" placeholder="ID du produit"><br><br>
+<input type="text" id="editNom" placeholder="Nouveau nom"><br><br>
+
+<select id="typePaiement">
+    <option value="">-- Type de paiement --</option>
+    <option value="Espèce">Espèce</option>
+    <option value="Chèque">Chèque</option>
+    <option value="Virement">Virement</option>
+    <option value="Mobile Money">Mobile Money</option>
+</select><br><br>
+
+<input type="number" id="editPrix" placeholder="Nouveau prix"><br><br>
+<textarea id="editDesc" placeholder="Nouvelle description"></textarea><br><br>
+<input type="file" id="editImage" multiple><br><br>
+
+<button onclick="modifierProduit()">Modifier</button>
+
+<hr>
+
+<h2>Liste des produits</h2>
+
+<table border="1">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Fichiers</th>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Prix</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+</table>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+    getFirestore, addDoc, collection, getDocs,
+    deleteDoc, doc, query, where, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyA58NXhLlnvjdczxfQUSczrRBz1HJrI77I",
+  authDomain: "compta-hirsi.firebaseapp.com",
+  projectId: "compta-hirsi",
+  storageBucket: "compta-hirsi.firebasestorage.app",
+  messagingSenderId: "677903647731",
+  appId: "1:677903647731:web:4292c36862a308af5b8886"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// DOM
+const form = document.getElementById("form");
+const tableBody = document.getElementById("tableBody");
+const autoSelect = document.getElementById("auto");
+const customIdInput = document.getElementById("customId");
+const fileList = document.getElementById("fileList");
+
+// localStorage init
+let savedFiles = JSON.parse(localStorage.getItem("files")) || [];
+savedFiles.forEach(f => addFileToList(f.url, f.name));
+
+// toggle ID manuel
+autoSelect.addEventListener("change", () => {
+    customIdInput.style.display = autoSelect.value == "0" ? "block" : "none";
+});
+
+// =======================
+// AJOUT PRODUIT
+// =======================
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nom = document.getElementById("nom").value;
+    const type = document.getElementById("type").value;
+    const prix = document.getElementById("prix").value;
+    const desc = document.getElementById("desc").value;
+
+    const files = Array.from(document.getElementById("fileInput").files);
+
+    let uploadedFiles = [];
+
+    try {
+
+        for (let file of files) {
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", "mon_formulaire");
+
+            const res = await fetch("https://api.cloudinary.com/v1_1/dbp6jdmxz/auto/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (!data.secure_url) {
+                throw new Error("Upload échoué");
+            }
+
+            uploadedFiles.push({
+                url: data.secure_url,
+                name: file.name
+            });
+
+            addFileToList(data.secure_url, file.name);
+
+            let saved = JSON.parse(localStorage.getItem("files")) || [];
+            saved.push({ url: data.secure_url, name: file.name });
+            localStorage.setItem("files", JSON.stringify(saved));
+        }
+
+        // ID
+        let finalId;
+
+        if (autoSelect.value == "1") {
+            const snapshot = await getDocs(collection(db, "produits"));
+            let maxId = 0;
+
+            snapshot.forEach(d => {
+                const data = d.data();
+                if (data.id && data.id > maxId) maxId = data.id;
+            });
+
+            finalId = maxId + 1;
+        } else {
+            finalId = parseInt(customIdInput.value);
+        }
+
+        await addDoc(collection(db, "produits"), {
+            id: finalId,
+            nom,
+            type,
+            prix,
+            desc,
+            files: uploadedFiles
+        });
+
+        alert("Produit ajouté !");
+        form.reset();
+        afficherProduits();
+
+    } catch (err) {
+        console.error(err);
+        alert("Erreur !");
+    }
+});
+
+// =======================
+// AFFICHAGE
+// =======================
+async function afficherProduits() {
+
+    tableBody.innerHTML = "";
+
+    const snapshot = await getDocs(collection(db, "produits"));
+
+    let produits = [];
+
+    snapshot.forEach(docItem => {
+        produits.push(docItem.data());
+    });
+
+    produits.sort((a, b) => b.id - a.id);
+
+    produits.forEach(data => {
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${data.id}</td>
+
+            <td>
+                ${
+                    data.files ? data.files.map(f => `
+                        <div>
+                            <a href="${f.url}" target="_blank">${f.name}</a><br>
+                            <button onclick="downloadFile('${f.url}')">Télécharger</button>
+                        </div>
+                        <hr>
+                    `).join("") : "Aucun fichier"
+                }
+            </td>
+
+            <td>${data.nom}</td>
+            <td>${data.type}</td>
+            <td>${data.prix}</td>
+            <td>${data.desc}</td>
+        `;
+
+        tableBody.appendChild(tr);
+    });
+}
+
+// =======================
+// DOWNLOAD
+// =======================
+window.downloadFile = (url) => {
+    const downloadUrl = url.replace("/upload/", "/upload/fl_attachment/");
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.target = "_blank";
+    a.click();
+};
+
+// =======================
+// ADD FILE LIST (local)
+// =======================
+function addFileToList(url, name) {
+    const li = document.createElement("li");
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.textContent = name;
+
+    const btn = document.createElement("button");
+    btn.textContent = "Télécharger";
+
+    btn.onclick = () => {
+        const downloadUrl = url.replace("/upload/", "/upload/fl_attachment/");
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.click();
+    };
+
+    li.appendChild(link);
+    li.appendChild(btn);
+
+    fileList.appendChild(li);
+}
+
+// =======================
+// SUPPRESSION
+// =======================
+window.supprimerParId = async () => {
+
+    const id = parseInt(document.getElementById("deleteId").value);
+
+    if (!confirm("Supprimer ID = " + id + " ?")) return;
+
+    const q = query(collection(db, "produits"), where("id", "==", id));
+    const snap = await getDocs(q);
+
+    snap.forEach(async (d) => {
+        await deleteDoc(doc(db, "produits", d.id));
+    });
+
+    alert("Supprimé");
+    afficherProduits();
+};
+
+// =======================
+// MODIFICATION
+// =======================
+window.modifierProduit = async () => {
+
+    const id = parseInt(document.getElementById("editId").value);
+
+    if (!confirm("Modifier ID = " + id)) return;
+
+    const q = query(collection(db, "produits"), where("id", "==", id));
+    const snap = await getDocs(q);
+
+    snap.forEach(async (d) => {
+
+        let updateData = {};
+
+        const nom = document.getElementById("editNom").value;
+        const type = document.getElementById("typePaiement").value;
+        const prix = document.getElementById("editPrix").value;
+        const desc = document.getElementById("editDesc").value;
+
+        if (nom) updateData.nom = nom;
+        if (type) updateData.type = type;
+        if (prix) updateData.prix = prix;
+        if (desc) updateData.desc = desc;
+
+        await updateDoc(doc(db, "produits", d.id), updateData);
+    });
+
+    alert("Modifié !");
+    afficherProduits();
+};
+
+// INIT
+afficherProduits();
+
+</script>
+
+</body>
+</html>

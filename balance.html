@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Balance</title>
+
+<style>
+body { font-family: Arial; margin: 0; padding-top: 100px; }
+
+header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: #2c3e50;
+    color: white;
+    padding: 15px;
+}
+
+nav a {
+    color: white;
+    margin-right: 20px;
+    text-decoration: none;
+    font-weight: bold;
+}
+button {
+    padding: 10px;
+    background: #6a6b6c;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.container {
+    padding: 20px;
+}
+
+.card {
+    background: #f5f5f5;
+    padding: 20px;
+    margin: 10px;
+    display: inline-block;
+    width: 250px;
+    border-radius: 8px;
+}
+#projectName {
+    background: #2c3e50;;
+    margin-right: 40px;
+    margin-left: 0;
+    color: #ffd700;
+}
+
+.projet{
+    background: #2c3e50;
+}
+.right-box {
+    display: flex;
+    flex-direction: column; /* 🔥 empile verticalement */
+    align-items: flex-end;  /* 🔥 tout à droite */
+}
+
+.projet-ligne {
+    display: flex;
+    gap: 5px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    margin-right: 0px;
+}
+
+#userBox {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 40px;
+    margin-bottom: -15px;
+}
+
+#userPhoto {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%; /* 🔥 rond */
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🔥 MENU -->
+<header>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        
+        <div>
+            <h2>💼 Gestion Financière</h2>
+            <nav>
+                <a href="register.html">Accueil</a>
+                <a href="budget.html">Budget</a>
+                <a href="indexPAGE.html">Coûts comptabilisés</a>
+                <a href="caisse.html">Dépenses en Espèce</a>
+                <a href="approvisionnement.html">Approvisionnement caisse</a>
+                <a href="rapport.html">Rapport de coûts</a>
+                <a href="financement.html">Financement</a>
+                <a href="balance.html">Balance</a>
+                <a href="paramettre.html">Paramètres</a>
+            </nav>
+        </div>
+              <!-- 🔥 UTILISATEUR -->
+     <div class="right-box">
+    
+    <div class="projet-ligne">
+        <span style="font-weight:bold;">Projet :</span>
+        <span id="projectName">...</span>
+    </div>
+
+    <div id="userBox">
+        <a href="profil.html">
+            <img id="userPhoto" src="https://via.placeholder.com/40">
+        </a>
+        <div id="userName"></div>
+    </div>
+    <div id="userBox">
+                <button onclick="logout()" style="background-color: #2c3e50; color: red;margin-right: -10px;">Déconnexion</boutton>
+    </div>
+
+</div>
+
+    </div>
+</header>
+
+<div class="container">
+
+<h1>⚖️ Balance Financière</h1>
+
+<div class="card">
+    <h3>💰 Total Financements</h3>
+    <p id="totalFinancement">0 FCFA</p>
+</div>
+
+<div class="card">
+    <h3>💸 Total Dépenses</h3>
+    <p id="totalDepense">0 FCFA</p>
+</div>
+
+<div class="card">
+    <h3>💵 Espèce</h3>
+    <p id="espece">0 FCFA</p>
+</div>
+
+<div class="card">
+    <h3>🏦 Chèque</h3>
+    <p id="cheque">0 FCFA</p>
+</div>
+
+<div class="card">
+    <h3>💳 Virement</h3>
+    <p id="virement">0 FCFA</p>
+</div>
+
+<div class="card">
+    <h3>⚖️ Reste à justifier</h3>
+    <p id="reste">0 FCFA</p>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, addDoc, collection, getDocs, getDoc,
+    deleteDoc, doc, query, where, onSnapshot} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyA58NXhLlnvjdczxfqUSczrRBz1HJrI77I",
+  authDomain: "compta-hirsi.firebaseapp.com",
+  projectId: "compta-hirsi",
+  storageBucket: "compta-hirsi.firebasestorage.app",
+  messagingSenderId: "677903647731",
+  appId: "1:677903647731:web:4292c36862a308af5b8886"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+window.logout = () => {
+  signOut(auth).then(() => {
+    window.location.href = "index.html";
+  });
+};
+// 🔥 calculs
+async function chargerBalance() {
+
+    let totalFinancement = 0;
+    let totalDepense = 0;
+
+    let espece = 0;
+    let cheque = 0;
+    let virement = 0;
+
+    // 🔹 Financements
+    const finSnap = await getDocs(collection(db, "financements"));
+    finSnap.forEach(doc => {
+        totalFinancement += doc.data().montant || 0;
+    });
+
+    // 🔹 Dépenses (caisse)
+    const depSnap = await getDocs(collection(db, "produits"));
+
+    depSnap.forEach(doc => {
+
+        const data = doc.data();
+        if(data.paye ===true){
+
+        totalDepense += data.prix|| 0;
+
+        // ⚠️ suppose que tu as un champ "mode"
+        if (data.type === "Espèce") espece += data.prix || 0;
+        if (data.type === "Chèque") cheque += data.prix || 0;
+        if (data.type === "Virement") virement += data.prix || 0;
+    
+        }
+    });
+
+    // 🔥 reste à justifier
+    const reste = totalFinancement - totalDepense;
+
+    // AFFICHAGE
+    document.getElementById("totalFinancement").textContent =
+        totalFinancement.toLocaleString("fr-FR") + " FCFA";
+
+    document.getElementById("totalDepense").textContent =
+        totalDepense.toLocaleString("fr-FR") + " FCFA";
+
+    document.getElementById("espece").textContent =
+        espece.toLocaleString("fr-FR") + " FCFA";
+
+    document.getElementById("cheque").textContent =
+        cheque.toLocaleString("fr-FR") + " FCFA";
+
+    document.getElementById("virement").textContent =
+        virement.toLocaleString("fr-FR") + " FCFA";
+
+    document.getElementById("reste").textContent =
+        reste.toLocaleString("fr-FR") + " FCFA";
+}
+
+// INIT
+chargerBalance();
+const links = document.querySelectorAll("nav a");
+
+// récupérer le nom de la page actuelle
+const currentPage = window.location.pathname.split("/").pop();
+
+links.forEach(link => {
+    const linkPage = link.getAttribute("href");
+
+    if (linkPage === currentPage) {
+        link.style.color = "#ffd700"; // optionnel (couleur)
+    }
+});
+onSnapshot(doc(db, "parametres", "config"), (snap) => {
+  if (snap.exists()) {
+    document.getElementById("projectName").textContent =
+      snap.data().nomProjet || "Projet";
+  }else {
+  }
+});
+onAuthStateChanged(auth, async (user) => {
+if (user) {
+
+    onSnapshot(doc(db, "users", user.uid), (snap) => {
+
+      if (snap.exists()) {
+        const data = snap.data();
+
+        document.getElementById("userPhoto").src =
+          data.photo || "https://via.placeholder.com/40";
+
+        document.getElementById("userName").textContent =
+          data.prenom + " " + data.nom;
+      
+  //     document.getElementById("preview").src =
+  // data.photo || "https://via.placeholder.com/120";
+        console.log("Auth OK");
+      }
+      });
+  } else {
+    window.location.href = "index.html";
+  }
+});
+</script>
+
+</body>
+</html>
