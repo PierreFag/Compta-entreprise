@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Connexion / Inscription Firebase</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
     input {
       display: block;
@@ -301,7 +302,7 @@ button:hover {
   import {
     getFirestore,
     setDoc,
-    doc
+    doc, getDoc, updateDoc, collection, getDocs, onSnapshot, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -323,7 +324,30 @@ button:hover {
   const title = document.getElementById("title");
   const registerFields = document.querySelectorAll(".register-only");
 
-  let isLogin = true;
+  const urlParams = new URLSearchParams(window.location.search);
+const invitedEmail = urlParams.get("email");
+
+if (invitedEmail) {
+  document.getElementById("email").value = invitedEmail;
+  document.getElementById("email").readOnly = true;
+}
+
+// 🔥 vérifier dans Firestore
+const inviteRef = doc(db, "invitations", invitedEmail);
+const inviteSnap = await getDoc(inviteRef);
+
+if (!inviteSnap.exists()) {
+  alert("Invitation invalide.");
+  return;
+}
+
+const inviteData = inviteSnap.data();
+
+if (inviteData.status !== "pending") {
+  alert("Invitation déjà utilisée ou invalide.");
+  return;
+}
+  let isLogin = false;
 
 
   toggle.onclick = () => {
@@ -382,7 +406,12 @@ button:hover {
         prenom,
         email,
         fonction,
-        photo: "" // 🔥 important
+        photo: "", // 🔥 important
+        role: inviteData.role, // 🔥 IMPORTANT
+        status: "active",      // 🔥 IMPORTANT
+        permissions: {
+          caisse: "write"
+        }
        });
 
         alert("Compte créé ! Vérifiez votre email avant de vous connecter.");
@@ -394,6 +423,10 @@ button:hover {
 
     form.reset();
   });
+
+  await updateDoc(inviteRef, {
+  status: "used"
+});
 
   let timeout;
 
