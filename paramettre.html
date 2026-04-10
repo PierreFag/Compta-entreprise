@@ -112,13 +112,13 @@ button {
 button:hover {
     background: #343f4a;
 }
-#nomProjet {
+#nomProjet, #nomSociete {
     background: #34495e;
     padding: 8px;
     border-radius: 6px;
     width: 10%;
 }
-#projectName {
+#companyName, #projectName {
     background: #2c3e50;;
     margin-right: 40px;
     margin-left: 0;
@@ -133,6 +133,14 @@ button:hover {
     align-items: flex-end;  /* 🔥 tout à droite */
 }
 
+.societe-ligne {
+    display: flex;
+    gap: 5px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    margin-right: 0px;
+    margin-left: 25%;
+}
 .projet-ligne {
     display: flex;
     gap: 5px;
@@ -165,7 +173,13 @@ button:hover {
     <div style="display:flex; justify-content:space-between; align-items:center;">
         
         <div>
-            <h2>💼 Gestion Financière</h2>
+            <div style="display: flex;">
+            <div ><h2>💼 OwoGestion</h2></div>
+            <div class="societe-ligne">
+        <span style="font-weight:bold;">Société:</span>
+        <span id="companyName">HIRISPRODUCTION ET EDITION</span>
+        </div>
+                </div>
             <nav>
                 <a href="register.html">Accueil</a>
                 <a href="budget.html">Budget</a>
@@ -179,10 +193,10 @@ button:hover {
             </nav>
         </div>
       <div class="right-box">
-    
+
     <div class="projet-ligne">
-        <span style="font-weight:bold;">Projet :</span>
-        <span id="projectName">...</span>
+        <span style="font-weight:bold;">Projet:</span>
+        <span id="projectName">TASSI HANGBE</span>
     </div>
 
     <div id="userBox">
@@ -209,6 +223,13 @@ button:hover {
     <button onclick="saveProjet()">Enregistrer</button>
      </div>
 
+     <div class="box">
+    <h3>Nom de la société</h3>
+
+    <input type="text" id="nomSociete" placeholder="Nom de la société">
+    <button onclick="saveSociete()">Enregistrer</button>
+</div>
+
 
 
 <script type="module">
@@ -233,9 +254,12 @@ const auth = getAuth(app);
 
 onSnapshot(doc(db, "parametres", "config"), (snap) => {
   if (snap.exists()) {
-    document.getElementById("projectName").textContent =
+    const data = snap.data();
+        document.getElementById("companyName").textContent =
+        snap.data().nomSociete || "Société";
+    
+        document.getElementById("projectName").textContent =
       snap.data().nomProjet || "Projet";
-  }else {
   }
 });
 window.logout = () => {
@@ -285,6 +309,21 @@ window.saveProjet = async () => {
     alert("Nom enregistré !");
 };
 
+window.saveSociete = async () => {
+
+    const nom = document.getElementById("nomSociete").value;
+
+    if (!nom) {
+        alert("Nom invalide");
+        return;
+    }
+
+    await setDoc(doc(db, "parametres", "config"), {
+        nomSociete: nom
+    }, { merge: true });
+
+    alert("Nom de la société enregistré !");
+};
 
 // INIT
 const links = document.querySelectorAll("nav a");

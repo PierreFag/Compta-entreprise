@@ -42,11 +42,26 @@ button {
     width: 250px;
     border-radius: 8px;
 }
-#projectName {
+#companyName, #projectName {
     background: #2c3e50;;
     margin-right: 40px;
     margin-left: 0;
     color: #ffd700;
+}
+.societe-ligne {
+    display: flex;
+    gap: 5px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    margin-right: 0px;
+    margin-left: 25%;
+}
+.projet-ligne {
+    display: flex;
+    gap: 5px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    margin-right: 0px;
 }
 
 .projet{
@@ -58,13 +73,6 @@ button {
     align-items: flex-end;  /* 🔥 tout à droite */
 }
 
-.projet-ligne {
-    display: flex;
-    gap: 5px;
-    font-size: 18px;
-    margin-bottom: 10px;
-    margin-right: 0px;
-}
 
 #userBox {
     display: flex;
@@ -89,7 +97,13 @@ button {
     <div style="display:flex; justify-content:space-between; align-items:center;">
         
         <div>
-            <h2>💼 Gestion Financière</h2>
+            <div style="display: flex;">
+            <div ><h2>💼 OwoGestion</h2></div>
+            <div class="societe-ligne">
+        <span style="font-weight:bold;">Société:</span>
+        <span id="companyName">...</span>
+        </div>
+                </div>
             <nav>
                 <a href="register.html">Accueil</a>
                 <a href="budget.html">Budget</a>
@@ -260,9 +274,12 @@ links.forEach(link => {
 });
 onSnapshot(doc(db, "parametres", "config"), (snap) => {
   if (snap.exists()) {
-    document.getElementById("projectName").textContent =
+    const data = snap.data();
+        document.getElementById("companyName").textContent =
+        snap.data().nomSociete || "Société";
+    
+        document.getElementById("projectName").textContent =
       snap.data().nomProjet || "Projet";
-  }else {
   }
 });
 onAuthStateChanged(auth, async (user) => {
