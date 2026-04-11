@@ -242,19 +242,21 @@ input[type="checkbox"]:checked {
             <div ><h2>💼 OwoGestion</h2></div>
             <div class="societe-ligne">
         <span style="font-weight:bold;">Société:</span>
-        <span id="companyName">...</span>
+        <span id="companyName">HIRISPRODUCTION ET EDITION</span>
         </div>
                 </div>
-            <nav>
+              <nav>
                 <a href="register.html">Accueil</a>
-                <a href="budget.html">Budget</a>
+                <a href="budget.html" id="menu-budget">Budget</a>
                 <a href="indexPAGE.html">Coûts comptabilisés</a>
                 <a href="caisse.html">Dépenses en Espèce</a>
-                <a href="approvisionnement.html">Approvisionnement caisse</a>
-                <a href="rapport.html">Rapport de coûts</a>
-                <a href="financement.html">Financement</a>
-                <a href="balance.html">Balance</a>
-                <a href="paramettre.html">Paramètres</a>
+                 <a href="approvisionnement.html" id="menu-appro">Approvisionnement caisse</a>
+
+                <a href="rapport.html" id="menu-rapport">Rapport de coûts</a>
+
+                <a href="financement.html" id="menu-financement">Financement</a>
+                <a href="balance.html" id="menu-balance">Balance</a>
+                <a href="paramettre.html" id="menu-paramettre">Paramètres</a>
             </nav>
         </div>
        <!-- 🔥 UTILISATEUR -->
@@ -262,7 +264,7 @@ input[type="checkbox"]:checked {
     
     <div class="projet-ligne">
         <span style="font-weight:bold;">Projet :</span>
-        <span id="projectName">...</span>
+        <span id="projectName">TASSI HANGBE</span>
     </div>
 
     <div id="userBox">
@@ -514,10 +516,20 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 window.logout = () => {
+    localStorage.removeItem("userData"); // 🔥 important
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
 };
+
+const localUser = localStorage.getItem("userData");
+
+if (localUser) {
+  const data = JSON.parse(localUser);
+
+  afficherUser(data);
+}
+
 // DOM
 const form = document.getElementById("form");
 const tableBody = document.getElementById("tableBody");
@@ -1062,6 +1074,7 @@ onSnapshot(doc(db, "parametres", "config"), (snap) => {
       snap.data().nomProjet || "Projet";
   }
 });
+
 onAuthStateChanged(auth, async (user) => {
 if (user) {
 
@@ -1070,11 +1083,11 @@ if (user) {
       if (snap.exists()) {
         const data = snap.data();
 
-        document.getElementById("userPhoto").src =
-          data.photo || "https://via.placeholder.com/40";
+        appliquerPermissionsMenu(data);
 
-        document.getElementById("userName").textContent =
-          data.prenom + " " + data.nom;
+     localStorage.setItem("userData", JSON.stringify(data));
+
+    afficherUser(data);
       
   //     document.getElementById("preview").src =
   // data.photo || "https://via.placeholder.com/120";
@@ -1085,6 +1098,43 @@ if (user) {
     window.location.href = "index.html";
   }
 });
+
+function afficherUser(data) {
+    const userName = document.getElementById("userName");
+    const userPhoto = document.getElementById("userPhoto");
+
+    userName.textContent = data.prenom + " " + data.nom;
+    userPhoto.src = data.photo || "https://via.placeholder.com/40";
+}
+
+function appliquerPermissionsMenu(data) {
+
+  if (data.role === "admin") return;
+
+  if (data.permissions?.budget === "none") {
+    document.getElementById("menu-budget")?.remove();
+  }
+
+  if (data.permissions?.rapport === "none") {
+    document.getElementById("menu-rapport")?.remove();
+  }
+
+  if (data.permissions?.rapport === "none") {
+    document.getElementById("menu-financement")?.remove();
+  }
+
+  if (data.permissions?.rapport === "none") {
+    document.getElementById("menu-appro")?.remove();
+  }
+
+  if (data.permissions?.rapport === "none") {
+    document.getElementById("menu-balance")?.remove();
+  }
+
+   if (data.permissions?.paramettre === "none") {
+    document.getElementById("menu-paramettre")?.remove();
+     }
+}
 // 🔥 TELECHARGEMENT
 /*window.telecharger = (url, filename) => {
     const downloadUrl = url.replace("/upload/", "/upload/fl_attachment:" + filename + "/");
