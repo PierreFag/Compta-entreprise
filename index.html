@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Connexion / Inscription Firebase</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
     input {
       display: block;
@@ -302,7 +301,7 @@ button:hover {
   import {
     getFirestore,
     setDoc,
-    doc, getDoc, updateDoc, collection, getDocs, onSnapshot, serverTimestamp
+    doc
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -324,29 +323,6 @@ button:hover {
   const title = document.getElementById("title");
   const registerFields = document.querySelectorAll(".register-only");
 
-  const urlParams = new URLSearchParams(window.location.search);
-const invitedEmail = urlParams.get("email");
-
-if (invitedEmail) {
-  document.getElementById("email").value = invitedEmail;
-  document.getElementById("email").readOnly = true;
-}
-
-// 🔥 vérifier dans Firestore
-const inviteRef = doc(db, "invitations", invitedEmail);
-const inviteSnap = await getDoc(inviteRef);
-
-if (!inviteSnap.exists()) {
-  alert("Invitation invalide.");
-  return;
-}
-
-const inviteData = inviteSnap.data();
-
-if (inviteData.status !== "pending") {
-  alert("Invitation déjà utilisée ou invalide.");
-  return;
-}
   let isLogin = false;
 
 
@@ -383,6 +359,7 @@ if (inviteData.status !== "pending") {
         window.location.href = "register.html";
 
       } catch (error) {
+        console.error(error);
         alert(error.message);
       }
 
@@ -392,7 +369,6 @@ if (inviteData.status !== "pending") {
       const prenom = document.getElementById("prenom").value;
       const fonction = document.getElementById("fonction").value;
       const email = document.getElementById("email").value;
-      const file = document.getElementById("photo").files[0];
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -406,12 +382,7 @@ if (inviteData.status !== "pending") {
         prenom,
         email,
         fonction,
-        photo: "", // 🔥 important
-        role: inviteData.role, // 🔥 IMPORTANT
-        status: "active",      // 🔥 IMPORTANT
-        permissions: {
-          caisse: "write"
-        }
+        photo: "" // 🔥 important
        });
 
         alert("Compte créé ! Vérifiez votre email avant de vous connecter.");
@@ -423,10 +394,6 @@ if (inviteData.status !== "pending") {
 
     form.reset();
   });
-
-  await updateDoc(inviteRef, {
-  status: "used"
-});
 
   let timeout;
 
