@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Connexion / Inscription Firebase</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
   <style>
     input {
       display: block;
@@ -189,8 +190,16 @@ button:hover {
 
 <form id="form">
   <input type="email" id="email" placeholder="Email" required>
+<div style="position: relative; width: 100%;">
+  <input type="password" id="password" placeholder="Mot de passe" required
+         style="width:100%; padding-right:40px;">
 
-  <input type="password" id="password" placeholder="Mot de passe" required>
+  <i id="togglePassword"
+     class="fa-solid fa-eye-slash"
+     style="position:absolute; right:10px; top:50%; transform:translateY(-50%);
+            cursor:pointer; color:gray;">
+  </i>
+</div>
   <button type="submit">Se connecter</button>
 
   <p style="color:blue; cursor:pointer;" onclick="resetPassword()">
