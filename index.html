@@ -189,6 +189,7 @@ button:hover {
 
 <form id="form">
   <input type="email" id="email" placeholder="Email" required>
+
   <input type="password" id="password" placeholder="Mot de passe" required>
   <button type="submit">Se connecter</button>
 
@@ -283,7 +284,29 @@ Mot de passe oublié ?
 </div>
 </section>
 
+<script>
+const toggle = document.getElementById("togglePassword");
+const password = document.getElementById("password");
 
+toggle.addEventListener("click", () => {
+
+  if (password.type === "password") {
+    password.type = "text";
+
+    // 🔥 change icône (œil ouvert)
+    toggle.classList.remove("fa-eye-slash");
+    toggle.classList.add("fa-eye");
+
+  } else {
+    password.type = "password";
+
+    // 🔥 icône barrée
+    toggle.classList.remove("fa-eye");
+    toggle.classList.add("fa-eye-slash");
+  }
+
+});
+</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
